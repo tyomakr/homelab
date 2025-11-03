@@ -1,0 +1,85 @@
+name: homelab
+
+services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file: [.env]
+    volumes:
+      - ./config/traefik/static/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./config/traefik/acme-certs:/certs:ro
+      - ./secrets/basic_auth.htpasswd:/run/secrets/basic_auth.htpasswd:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [proxy]
+    profiles: ["proxy"]
+    labels:
+      - "traefik.enable=true"
+      # Dashboard, доступ закрыт allowlist + basicAuth
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.middlewares=chain-default@file,basicauth@file"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+  splash:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./config/nginx-splash/html:/usr/share/nginx/html:ro
+      - ./config/nginx-splash/conf.d:/etc/nginx/conf.d:ro
+    networks: [proxy]
+    profiles: ["proxy"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.splash.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.splash.entrypoints=websecure"
+      - "traefik.http.routers.splash.tls=true"
+      - "traefik.http.routers.splash.middlewares=chain-public@file"
+
+  # агент выпуска wildcard (DNS-01 REG.RU). Запускать скриптом bin/acme-issue.sh
+  acme:
+    image: neilpang/acme.sh:latest
+    container_name: acme
+    profiles: ["acme"]
+    env_file:
+      - ./secrets/regru.env
+      - ./.env
+    environment:
+      - LE_WORKING_DIR=/acme.sh
+    volumes:
+      - ./config/traefik/acme-certs:/out
+      - ./config/traefik/dynamic:/traefik_dynamic
+      - ./config/traefik/acme-home:/acme.sh
+    entrypoint: ["/bin/sh","-c"]
+    command: |
+      echo "acme.sh helper container (run via bin/acme-issue.sh or systemd timer)"; sleep infinity
+    networks: [proxy]
+
+  gitea:
+    image: gitea/gitea:1.25
+    restart: unless-stopped
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__server__ROOT_URL=https://git.${DOMAIN}/
+      - GITEA__server__DOMAIN=git.${DOMAIN}
+      - GITEA__server__HTTP_PORT=3000
+    volumes:
+      - ./data/gitea:/data
+    networks: [proxy]
+    profiles: ["gitea"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitea.rule=Host(`git.${DOMAIN}`)"
+      - "traefik.http.routers.gitea.entrypoints=websecure"
+      - "traefik.http.routers.gitea.tls=true"
+      - "traefik.http.routers.gitea.middlewares=chain-default@file"
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+
+networks:
+  proxy:
+    driver: bridge

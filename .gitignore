@@ -1,0 +1,7 @@
+# local runtime & secrets
+.env
+secrets/
+data/
+config/traefik/dynamic/01-allowlist.yaml
+config/traefik/acme-certs/
+config/traefik/acme-home/

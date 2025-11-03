@@ -1,0 +1,25 @@
+http:
+  middlewares:
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        frameDeny: true
+        browserXssFilter: true
+
+    basicauth:
+      basicAuth:
+        usersFile: "/run/secrets/basic_auth.htpasswd"
+
+    chain-default:
+      chain:
+        middlewares:
+          - allowlist-default
+          - security-headers
+
+    chain-public:
+      chain:
+        middlewares:
+          - security-headers

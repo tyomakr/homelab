@@ -1,0 +1,7 @@
+http:
+  middlewares:
+    allowlist-default:
+      ipAllowList:
+        sourceRange:
+          - "YOUR.PUBLIC.IP/32"
+          - "192.168.0.0/16"

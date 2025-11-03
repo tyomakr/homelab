@@ -1,0 +1,8 @@
+http:
+  # serversTransports:
+  #   insecure-skip:
+  #     insecureSkipVerify: true
+
+  routers: {}
+
+  services: {}

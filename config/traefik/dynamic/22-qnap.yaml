@@ -1,0 +1,20 @@
+# config/traefik/dynamic/22-qnap.yaml  (пример для HTTPS с самоподписанным)
+http:
+  serversTransports:
+    insecure-skip:
+      insecureSkipVerify: true
+
+  routers:
+    qnap:
+      rule: 'Host(`q.{{ env "DOMAIN" }}`)'
+      entryPoints: ["websecure"]
+      middlewares: ["chain-default"]
+      service: qnap
+      tls: {}
+
+  services:
+    qnap:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.222.10:443"
+        serversTransport: "insecure-skip"

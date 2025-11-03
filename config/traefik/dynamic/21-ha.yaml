@@ -1,0 +1,15 @@
+# config/traefik/dynamic/21-ha.yaml
+http:
+  routers:
+    hass:
+      rule: 'Host(`hass.{{ env "DOMAIN" }}`)'
+      entryPoints: ["websecure"]
+      middlewares: ["chain-default"]
+      service: hass
+      tls: {}  # возьмет wildcard из default store
+
+  services:
+    hass:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.222.24:8123"

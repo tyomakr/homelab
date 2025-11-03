@@ -1,12 +1,30 @@
 # config/traefik/dynamic/21-ha.yaml
 http:
+  middlewares:
+    security-headers-hass:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        # ВАЖНО: разрешаем iframe для Ingress
+        frameDeny: false
+        customFrameOptionsValue: "SAMEORIGIN"
+
+    chain-hass:
+      chain:
+        middlewares:
+          - allowlist-default       # из 01-allowlist.yaml
+          - security-headers-hass
+
   routers:
     hass:
       rule: 'Host(`hass.{{ env "DOMAIN" }}`)'
       entryPoints: ["websecure"]
-      middlewares: ["chain-default"]
+      middlewares: ["chain-hass"]    # используем мягкую цепочку для HA
       service: hass
-      tls: {}  # возьмет wildcard из default store
+      tls: {}                        # wildcard из default store
 
   services:
     hass:

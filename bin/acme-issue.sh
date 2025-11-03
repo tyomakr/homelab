@@ -15,7 +15,7 @@ docker compose run --rm acme sh -c "
     -d ${DOMAIN} -d \"*.${DOMAIN}\" \
     --keylength 4096 \
     --server letsencrypt \
-    --dnssleep 300 \
+    --dnssleep 600 \
     --debug 2
 
   mkdir -p /out/${DOMAIN}

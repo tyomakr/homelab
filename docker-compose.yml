@@ -54,9 +54,6 @@ services:
       - ./config/traefik/acme-certs:/out
       - ./config/traefik/dynamic:/traefik_dynamic
       - ./config/traefik/acme-home:/acme.sh
-    entrypoint: ["/bin/sh","-c"]
-    command: |
-      echo "acme.sh helper container (run via bin/acme-issue.sh or systemd timer)"; sleep infinity
     networks: [proxy]
 
   gitea:

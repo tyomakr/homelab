@@ -2,5 +2,5 @@ tls:
   stores:
     default:
       defaultCertificate:
-        certFile: "/certs/${DOMAIN}/fullchain.pem"
-        keyFile: "/certs/${DOMAIN}/privkey.pem"
+        certFile: "/certs/{{ env "DOMAIN" }}/fullchain.pem"
+        keyFile: "/certs/{{ env "DOMAIN" }}/privkey.pem"

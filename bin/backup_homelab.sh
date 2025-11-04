@@ -2,7 +2,13 @@
 # homelab backup helper
 # Backs up the homelab project (compose, config, data, secrets) to /mnt/nas/docker_data
 # Creates timestamped snapshot and updates a "latest" symlink. Keeps N most recent backups.
+# If not run as root, re-exec with sudo to ensure we can read root-owned files (e.g., TLS keys).
 set -euo pipefail
+
+# ---------- Auto-escalate to root (to read privkey/account keys safely) ----------
+if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+  exec sudo -E bash "$0" "$@"
+fi
 
 # ---------- Settings ----------
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -22,15 +28,19 @@ require_cmd() {
 }
 
 # ---------- Pre-flight ----------
-require_cmd rsync find sort awk date df du mkdir printf
+require_cmd rsync find sort awk date df du mkdir printf mountpoint || true
 [[ -d "$PROJECT_ROOT" ]] || die "PROJECT_ROOT not found: $PROJECT_ROOT"
 
 # Check mount & writability
-if ! mountpoint -q -- "$DEST_ROOT"; then
-  # fallback check via /proc/mounts if mountpoint is not available or fails
-  if ! grep -qs " $(printf '%s' "$DEST_ROOT" | sed 's/[[:space:]]/\\&/g') " /proc/mounts; then
-    die "Destination root is not a mountpoint: $DEST_ROOT"
-  fi
+if command -v mountpoint >/dev/null 2>&1; then
+  mountpoint -q -- "$DEST_ROOT" || {
+    # fallback check via /proc/mounts
+    grep -qs " $(printf '%s' "$DEST_ROOT" | sed 's/[[:space:]]/\\&/g') " /proc/mounts \
+      || die "Destination root is not a mountpoint: $DEST_ROOT"
+  }
+else
+  grep -qs " $(printf '%s' "$DEST_ROOT" | sed 's/[[:space:]]/\\&/g') " /proc/mounts \
+    || die "Destination root is not a mountpoint: $DEST_ROOT"
 fi
 [[ -w "$DEST_ROOT" ]] || die "Destination root is not writable: $DEST_ROOT"
 
@@ -40,8 +50,6 @@ DEST="${SNAP_DIR}/${DATE}"
 mkdir -p "$DEST" || die "Cannot create destination $DEST"
 
 # ---------- What to back up ----------
-# Keep list explicit to avoid accidental large copies.
-# Add/remove entries here as your stack grows.
 INCLUDE=(
   "docker-compose.yml"
   ".env"
@@ -77,7 +85,7 @@ fi
 # Ensure destination exists
 mkdir -p "$DEST"
 
-# Copy each item explicitly (keeps top-level clean and predictable)
+# Copy each item explicitly
 for p in "${INCLUDE[@]}"; do
   if [[ -e "$PROJECT_ROOT/$p" ]]; then
     log "Sync $p ..."

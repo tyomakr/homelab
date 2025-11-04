@@ -1,5 +1,22 @@
-# config/traefik/dynamic/22-qnap.yaml  (пример для HTTPS с самоподписанным)
+# config/traefik/dynamic/22-qnap.yaml
 http:
+  middlewares:
+    security-headers-qnap:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        frameDeny: false
+        customFrameOptionsValue: "SAMEORIGIN"
+
+    chain-qnap:
+      chain:
+        middlewares:
+          - allowlist-default
+          - security-headers-qnap
+
   serversTransports:
     insecure-skip:
       insecureSkipVerify: true
@@ -8,7 +25,7 @@ http:
     qnap:
       rule: 'Host(`q.{{ env "DOMAIN" }}`)'
       entryPoints: ["websecure"]
-      middlewares: ["chain-default"]
+      middlewares: ["chain-qnap"]
       service: qnap
       tls: {}
 

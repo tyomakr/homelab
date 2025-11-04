@@ -85,11 +85,18 @@ fi
 # Ensure destination exists
 mkdir -p "$DEST"
 
-# Copy each item explicitly
+# ---------- Copy preserving top-level folder names ----------
 for p in "${INCLUDE[@]}"; do
-  if [[ -e "$PROJECT_ROOT/$p" ]]; then
-    log "Sync $p ..."
-    "${RSYNC[@]}" "$PROJECT_ROOT/$p" "$DEST/"
+  src="$PROJECT_ROOT/$p"
+  if [[ -d "$src" ]]; then
+    # preserve directory name (e.g., data/ -> <DEST>/data/)
+    dest="$DEST/${p%/}"
+    mkdir -p "$dest"
+    log "Sync dir $p -> ${dest}/ ..."
+    "${RSYNC[@]}" "$src" "$dest/"
+  elif [[ -f "$src" ]]; then
+    log "Sync file $p -> $DEST/ ..."
+    "${RSYNC[@]}" "$src" "$DEST/"
   else
     log "Skip (not found): $p"
   fi

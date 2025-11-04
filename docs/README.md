@@ -13,7 +13,7 @@
 - **Traefik**: `traefik:v3.5` — reverse proxy / TLS‑терминация  
 - **Nginx splash**: `nginx:1.28-alpine` — статичная заглушка для корня домена  
 - **Gitea**: `gitea/gitea:1.25` — Git‑сервис
-- **acme.sh агент**: `neilpang/acme.sh:latest` — выпуск/обновление wildcard по DNS‑01 REG.RU
+- **acme.sh агент**: `neilpang/acme.sh:3.1.1` — выпуск/обновление wildcard по DNS‑01 REG.RU
 
 > Дополнительно (опционально, позже): **Portainer**, **AdGuard Home**, внутренние сервисы (QNAP/HA и др.) через Traefik file‑provider.
 

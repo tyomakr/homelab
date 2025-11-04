@@ -1,0 +1,8 @@
+http:
+  routers:
+    traefik:
+      rule: 'Host(`td.{{ env "DOMAIN" }}`)'
+      entryPoints: ["websecure"]
+      service: api@internal
+      middlewares: ["allowlist-default", "basicauth"]
+      tls: {}

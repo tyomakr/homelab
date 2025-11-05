@@ -15,7 +15,6 @@ services:
       - ./secrets/basic_auth.htpasswd:/run/secrets/basic_auth.htpasswd:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [proxy]
-    profiles: ["proxy"]
     labels:
       - "traefik.enable=true"
       # Dashboard, доступ закрыт allowlist + basicAuth
@@ -32,7 +31,6 @@ services:
       - ./config/nginx-splash/html:/usr/share/nginx/html:ro
       - ./config/nginx-splash/conf.d:/etc/nginx/conf.d:ro
     networks: [proxy]
-    profiles: ["proxy"]
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.splash.rule=Host(`${DOMAIN}`)"
@@ -76,6 +74,29 @@ services:
       - "traefik.http.routers.gitea.tls=true"
       - "traefik.http.routers.gitea.middlewares=chain-default@file"
       - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+
+  portainer:
+    image: portainer/portainer-ee:latest
+    container_name: homelab-portainer-1
+    restart: unless-stopped
+    depends_on:
+      - traefik
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/portainer:/data
+    profiles: ["portainer"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`p.${DOMAIN}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.routers.portainer.middlewares=chain-default@file"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+
 
 networks:
   proxy:

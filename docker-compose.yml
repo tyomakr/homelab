@@ -69,7 +69,7 @@ services:
     profiles: ["adguard"]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adh.rule=Host(`adh.${DOMAIN}`)"
+      - "traefik.http.routers.adh.rule=Host(`agh.${DOMAIN}`)"
       - "traefik.http.routers.adh.entrypoints=websecure"
       - "traefik.http.routers.adh.tls=true"
       - "traefik.http.routers.adh.middlewares=chain-default@file"

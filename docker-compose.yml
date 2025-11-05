@@ -54,6 +54,27 @@ services:
       - ./config/traefik/acme-home:/acme.sh
     networks: [proxy]
 
+  adguard:
+    image: adguard/adguardhome:latest
+    container_name: homelab-adguard-1
+    restart: unless-stopped
+    # DNS-порты публикуем на хост:
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    networks: [proxy]                   # нужен доступ к Traefik
+    volumes:
+      - ./data/adguard/work:/opt/adguardhome/work
+      - ./data/adguard/conf:/opt/adguardhome/conf
+    profiles: ["adguard"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adh.rule=Host(`adh.${DOMAIN}`)"
+      - "traefik.http.routers.adh.entrypoints=websecure"
+      - "traefik.http.routers.adh.tls=true"
+      - "traefik.http.routers.adh.middlewares=chain-default@file"
+      - "traefik.http.services.adh.loadbalancer.server.port=3000" # мастер/GUI  
+
   gitea:
     image: gitea/gitea:1.25
     restart: unless-stopped

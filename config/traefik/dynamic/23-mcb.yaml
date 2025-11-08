@@ -1,0 +1,32 @@
+# config/traefik/dynamic/23-mcb.yaml (metacube-ui)
+http:
+  routers:
+    # редирект корня mcb.<domain> -> /ui/
+    mcb-root-redirect:
+      rule: 'Host(`mcb.{{ env "DOMAIN" }}`) && Path(`/`)'
+      entryPoints: ["websecure"]
+      middlewares: ["allowlist-default", "mcb-to-ui"]
+      service: noop@internal
+      tls: {}
+
+    # основной роутер (проксируем всё как есть)
+    mcb:
+      rule: 'Host(`mcb.{{ env "DOMAIN" }}`)'
+      entryPoints: ["websecure"]
+      middlewares: ["chain-default"]   # включает allowlist + безопасные заголовки
+      service: mcb
+      tls: {}
+
+  middlewares:
+    # локальный middleware на редирект корня
+    mcb-to-ui:
+      redirectRegex:
+        regex: "^/$"
+        replacement: "/ui/"
+
+  services:
+    mcb:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.233.30:9090"
+        passHostHeader: true   # по умолчанию true;

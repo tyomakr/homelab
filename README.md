@@ -213,7 +213,88 @@ curl -I --resolve agh.${DOMAIN}:443:<server_ip> https://agh.${DOMAIN}
 
 ---
 
-## 10) Бэкап (на NAS)
+---
+
+## 10) Vikunja на `tsk.${DOMAIN}` (профиль `vikunja`)
+
+Self-hosted таск‑менеджер для личного планирования и учёта задач (работа и хобби) за Traefik.
+
+### Подготовка данных
+
+```bash
+mkdir -p data/vikunja/files data/vikunja/db
+sudo chown -R 1000:1000 data/vikunja
+```
+
+Vikunja в контейнере работает под UID `1000`, поэтому владельцем каталогов данных должен быть этот пользователь.
+
+### Переменные окружения
+
+В `.env` добавить как минимум:
+
+```env
+VIKUNJA_JWT_SECRET=длинный_случайный_секрет
+# опционально, если используется SMTP с паролем:
+VIKUNJA_MAILER_PASSWORD=пароль_SMTP_или_app_password
+```
+
+Сервис `vikunja` уже описан в `docker-compose.yml` (профиль `vikunja`) и использует:
+
+- `VIKUNJA_SERVICE_PUBLICURL=https://tsk.${DOMAIN}/` — внешний URL со слэшем в конце;
+- `VIKUNJA_SERVICE_ENABLEREGISTRATION=false` — можно включить на время, чтобы создать первого пользователя, затем выключить саморегистрацию;
+- `VIKUNJA_DATABASE_TYPE=sqlite`, `VIKUNJA_DATABASE_PATH=/db/vikunja.db` — база лежит в `./data/vikunja/db/vikunja.db`;
+- каталог вложений монтируется как `./data/vikunja/files:/app/vikunja/files`.
+
+### Запуск и проверка
+
+```bash
+COMPOSE_PROFILES=vikunja docker compose up -d vikunja
+curl -I --resolve tsk.${DOMAIN}:443:<server_ip> https://tsk.${DOMAIN}
+```
+
+Ожидаемый ответ — `200`/`302` от Vikunja без `TRAEFIK DEFAULT CERT`.
+
+Первый пользователь создаётся через форму регистрации на `https://tsk.${DOMAIN}` (после этого рекомендуется оставить `VIKUNJA_SERVICE_ENABLEREGISTRATION="false"`).
+
+### Почта (SMTP) для восстановления пароля
+
+Для отправки писем (reset password, уведомления) в `docker-compose.yml` в секции `environment` сервиса `vikunja` задать:
+
+```yaml
+      VIKUNJA_MAILER_ENABLED: "true"
+      VIKUNJA_MAILER_HOST: smtp.example.com
+      VIKUNJA_MAILER_PORT: 587            # 587 с STARTTLS или 465 при FORCESSL=true
+      VIKUNJA_MAILER_AUTHTYPE: login
+      VIKUNJA_MAILER_USERNAME: user@example.com
+      VIKUNJA_MAILER_PASSWORD: ${VIKUNJA_MAILER_PASSWORD}
+      VIKUNJA_MAILER_FROMEMAIL: "vikunja@example.com"
+      VIKUNJA_MAILER_FORCESSL: "false"    # "true" для SMTPS на 465
+      VIKUNJA_MAILER_SKIPTLSVERIFY: "false"
+```
+
+Конкретные значения зависят от SMTP‑провайдера (порт, тип шифрования, логин/пароль).
+
+### Администрирование пользователей (CLI)
+
+Отдельной веб‑админки у Vikunja нет, управление пользователями выполняется через CLI внутри контейнера:
+
+```bash
+# список пользователей
+docker exec -it homelab-vikunja-1 /app/vikunja/vikunja user list
+
+# создать нового пользователя
+docker exec -it homelab-vikunja-1 /app/vikunja/vikunja user create \
+  -u newuser \
+  -e newuser@example.com
+
+# сбросить пароль пользователю с ID=1
+docker exec -it homelab-vikunja-1 /app/vikunja/vikunja user reset-password 1 --direct
+```
+
+Имена контейнера и ID пользователя подставить по месту (`docker ps`, `user list`).
+
+
+## 11) Бэкап (на NAS)
 
 Скрипт: `/opt/homelab/bin/backup_homelab.sh`
 
@@ -252,7 +333,7 @@ Logrotate `/etc/logrotate.d/homelab-backup`:
 
 ---
 
-## 11) GitHub по SSH (на сервере)
+## 12) GitHub по SSH (на сервере)
 
 Работайте из‑под обычного пользователя (не root):
 
@@ -286,7 +367,7 @@ git push
 
 ---
 
-## 12) Локальные «ensure» задачи (не меняют отслеживаемые файлы)
+## 13) Локальные «ensure» задачи (не меняют отслеживаемые файлы)
 
 Запустить после `git clone/pull`, чтобы создать локальные заготовки при первом запуске:
 ```bash
@@ -299,7 +380,7 @@ bin/ensure-local.sh
 
 ---
 
-## 13) Частые ошибки
+## 14) Частые ошибки
 
 - **TRAEFIK DEFAULT CERT** — не подхватился `90-tls-certs.yaml` или валится весь file‑provider из‑за ошибки в любом `*.yaml`. Смотрите логи: `docker logs homelab-traefik-1 --since=2m`.
 - **routers cannot be a standalone element** — в пустом файле лишние `routers:`/`services:`. Удалите файл или переименуйте в `.off`.

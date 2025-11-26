@@ -84,6 +84,7 @@ services:
       - GITEA__server__ROOT_URL=https://git.${DOMAIN}/
       - GITEA__server__DOMAIN=git.${DOMAIN}
       - GITEA__server__HTTP_PORT=3000
+      - GITEA__actions_ENABLED=true
     volumes:
       - ./data/gitea:/data
     networks: [proxy]
@@ -123,12 +124,18 @@ services:
     restart: unless-stopped
     profiles: ["vikunja"]
     environment:
-      VIKUNJA_SERVICE_PUBLICURL: https://tsk.${DOMAIN}
+      VIKUNJA_SERVICE_PUBLICURL: https://tsk.${DOMAIN}/
       VIKUNJA_SERVICE_JWTSECRET: ${VIKUNJA_JWT_SECRET}
+      VIKUNJA_DATABASE_TYPE: sqlite
+      VIKUNJA_DATABASE_PATH: /db/vikunja.db
       TZ: ${TZ}
+      #настройка ниже позволяет запретить регистрацию новых пользователей
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
     volumes:
-      - ./data/vikunja:/app/vikunja
-    networks: [proxy]
+      - ./data/vikunja/files:/app/vikunja/files
+      - ./data/vikunja/db:/db
+    networks:
+      - proxy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.vikunja.entrypoints=websecure"
